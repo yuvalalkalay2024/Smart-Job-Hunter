@@ -35,5 +35,5 @@ Job hunting often involves manually scouring multiple company pages and trying t
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/YourUsername/your-repo-name.git](https://github.com/YourUsername/your-repo-name.git)
+   git clone https://github.com/yuvalalkalay2024/Smart-Job-Hunter.git
    cd your-repo-name
