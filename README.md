@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎯 Smart Job Hunter & Networking CRM
 
-## Getting Started
+A personalized, automated job search engine and application tracker built with Next.js. 
+This system scrapes open positions from major Applicant Tracking Systems (ATS) and automatically cross-references them with the user's personal LinkedIn connections to find warm referral opportunities.
 
-First, run the development server:
+## 🚀 The Problem It Solves
+Job hunting often involves manually scouring multiple company pages and trying to remember if you know someone who works there. This application automates the process by targeting specific ATS platforms popular in the tech industry, applying strict geographical and experience-level filters, and instantly matching the results with your LinkedIn network.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Key Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+* **Targeted ATS Scraping:** Integrates with SerpApi to fetch real-time job postings from top platforms: `Comeet`, `Greenhouse`, `Lever`, `Ashby`, and `Workable`.
+* **Smart Networking Algorithm:** 
+  * Parses exported LinkedIn `Connections.csv` files locally (bypassing LinkedIn API restrictions).
+  * Uses a hybrid matching engine (`Fuse.js` for fuzzy matching + Regex word-boundary brute-forcing) to perfectly match complex URL company slugs (e.g., `abra_rnd`) with official LinkedIn company names (e.g., `abra R&D Solutions`).
+* **Advanced Filtering:** Filters results by Job Title, Platform, Experience Level (Junior/Mid/Senior), and Years of Experience.
+* **Geographical Precision:** Optimized for the local tech market with hardcoded location heuristics to eliminate irrelevant global remote listings.
+* **Built-in Application CRM (Job Tracker):** A dedicated dashboard to manage applications, track CV versions (e.g., Full Stack vs. Embedded), log interview statuses, and set follow-up dates.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* **Framework:** Next.js (App Router)
+* **Styling:** Tailwind CSS
+* **Data Fetching:** SerpApi (Google Search Engine API)
+* **Data Processing:** PapaParse (CSV parsing)
+* **Search Logic:** Fuse.js (Lightweight fuzzy-search)
 
-## Learn More
+## 📦 Getting Started
 
-To learn more about Next.js, take a look at the following resources:
+### Prerequisites
+1. Node.js installed on your machine.
+2. A free API key from [SerpApi](https://serpapi.com/).
+3. Your LinkedIn Connections export file (`Connections.csv`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Installation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/YourUsername/your-repo-name.git](https://github.com/YourUsername/your-repo-name.git)
+   cd your-repo-name
