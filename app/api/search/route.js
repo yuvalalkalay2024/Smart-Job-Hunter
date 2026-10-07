@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
 import Fuse from 'fuse.js';
 
-function extractCompanyName(url, platform) {
+function extractCompanyName(url) {
   try {
     const urlObj = new URL(url);
     const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    
-    // Comeet נשאר ללא שינוי בדיוק כמו שהיה
-    if (platform.includes('comeet') && pathParts.length >= 2) return pathParts[1];
     
     // ברוב המערכות האחרות (Greenhouse, Lever, Ashby, Workable) החברה היא החלק הראשון בנתיב
     if (pathParts.length >= 1) return pathParts[0];
@@ -19,34 +16,24 @@ function extractCompanyName(url, platform) {
 
 // ... (השאר את הפונקציה extractCompanyName כפי שהיא)
 
-async function fetchJobsFromGoogle(jobTitle, platform, experienceLevel, yearsOfExperience, start = 0) {
+async function fetchJobsFromGoogle(jobTitle, start = 0) {
   const apiKey = process.env.SERPAPI_KEY; 
   
-  const location = platform.includes('comeet') ? '"Israel"' : '("Tel Aviv" OR "Israel")';
-  let queryParts = [`site:${platform}`, `"${jobTitle}"`, location];
+  let query = [`site:www.comeet.com/jobs junior ${jobTitle} Israel`];
 
-  if (experienceLevel) queryParts.push(`"${experienceLevel}"`);
-
-  if (yearsOfExperience) {
-    if (yearsOfExperience === '0-1') queryParts.push('("0 years" OR "junior")');
-    else if (yearsOfExperience === '1-3') queryParts.push('("1 year" OR "2 years")');
-    else if (yearsOfExperience === '3-5') queryParts.push('("3 years" OR "4 years")');
-    else if (yearsOfExperience === '5+') queryParts.push('("5+ years")');
-  }
-
-  const query = queryParts.join(" ");
-  console.log(`Executing query for ${platform} with start=${start}:`, query);
+  console.log(`Executing query for comeet with start=${start}:`, query);
   
   // הוספנו את פרמטר &start= ל-URL
-  const url = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query)}&api_key=${apiKey}&num=20&start=${start}`;
+  const url = `https://serpapi.com/search.json?hebrew=google&q=${encodeURIComponent(query)}&api_key=${apiKey}&num=20&start=${start}`;
 
+  console.log(url);
   try {
     const response = await fetch(url);
     const data = await response.json();
 
     if (data.organic_results && data.organic_results.length > 0) {
       return data.organic_results.map(result => ({
-        title: result.title,
+        title: result.title.replace(/\s*[-–|]?\s*Comeet\s*/gi, ' ').trim(),
         url: result.link
       }));
     } else {
@@ -61,21 +48,18 @@ async function fetchJobsFromGoogle(jobTitle, platform, experienceLevel, yearsOfE
 export async function POST(request) {
   try {
     // קבלת פרמטר start מהממשק (ברירת מחדל 0)
-    const { jobTitle, platforms, connectionsData, experienceLevel, yearsOfExperience, start = 0 } = await request.json();
+    const { jobTitle, connectionsData, start = 0 } = await request.json();
     let allJobs = [];
 
-    for (const platform of platforms) {
       // העברת start לפונקציה
-      const rawResults = await fetchJobsFromGoogle(jobTitle, platform, experienceLevel, yearsOfExperience, start);
+      const rawResults = await fetchJobsFromGoogle(jobTitle, start);
       
       const processedResults = rawResults.map(job => ({
         ...job,
-        company: extractCompanyName(job.url, platform),
-        platform: platform
+        company: extractCompanyName(job.url)
       }));
       
       allJobs.push(...processedResults);
-    }
 
     if (connectionsData && connectionsData.length > 0) {
       // 1. החזרנו את הרגישות ל-0.3 לדיוק גבוה יותר
@@ -132,11 +116,10 @@ export async function POST(request) {
               connectionPosition: match[0].item['Position'],
               linkedinCompany: match[0].item['Company']
             }
-          };
-        } else {
-          return { ...job, hasConnection: false };
+        } }else {
+          return { ...job };
         }
-      });
+    });
     }
 
     return NextResponse.json({ success: true, data: allJobs });

@@ -1,34 +1,20 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import { useSession, signIn, signOut } from "next-auth/react";
 
 export default function Home() {
+  const { data: session, status } = useSession();
   const [isMounted, setIsMounted] = useState(false);
   const [results, setResults] = useState([]);
   const [jobTitle, setJobTitle] = useState('');
   
-  const [experienceLevel, setExperienceLevel] = useState('');
-  const [yearsOfExperience, setYearsOfExperience] = useState('');
-  
   const [connections, setConnections] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  // הוספנו את Ashby ו-Workable למערך הדיפולטיבי
-  const [platforms, setPlatforms] = useState({
-    'comeet.com/jobs': true,
-    'apply.workable.com': false,
-    'jobs.ashbyhq.com': false,
-    'boards.greenhouse.io': false,
-    'jobs.lever.co': false
-  });
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const handlePlatformChange = (platform) => {
-    setPlatforms(prev => ({ ...prev, [platform]: !prev[platform] }));
-  };
 
 const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -83,12 +69,7 @@ const handleFileUpload = (e) => {
 
   // פונקציה כללית לשליפת משרות
   const fetchJobs = async (currentStart, isLoadMore = false) => {
-    const selectedPlatforms = Object.keys(platforms).filter(key => platforms[key]);
-    if (selectedPlatforms.length === 0) {
-      alert("אנא בחר לפחות מקור חיפוש אחד");
-      return;
-    }
-
+    
     if (isLoadMore) setLoadingMore(true);
     else setLoading(true);
 
@@ -98,10 +79,6 @@ const handleFileUpload = (e) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jobTitle: jobTitle,
-          platforms: selectedPlatforms,
-          connectionsData: connections,
-          experienceLevel: experienceLevel,
-          yearsOfExperience: yearsOfExperience,
           start: currentStart // שליחת המיקום שממנו ממשיכים לחפש
         })
       });
@@ -144,8 +121,51 @@ const handleFileUpload = (e) => {
 
   if (!isMounted) return null; 
 
+  if (status === "loading") {
+    return <div className="min-h-screen flex items-center justify-center text-xl">טוען...</div>;
+  }
+
+  if (!session) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <h1 className="text-5xl font-bold text-gray-900 mb-6 text-center">Smart Job Hunter 🚀</h1>
+        <p className="text-xl text-gray-600 mb-10 text-center max-w-2xl">
+          מנוע חיפוש המשרות החכם שלך. מוצא משרות מתחת לרדאר בחברות ישראליות, 
+          ומצליב אותן אוטומטית עם רשת הלינקדאין שלך כדי למצוא ממליצים.
+        </p>
+        <button 
+          onClick={() => signIn('google')} 
+          className="bg-white border border-gray-300 text-gray-700 px-8 py-4 rounded-xl shadow-md hover:bg-gray-50 flex items-center gap-4 text-lg font-semibold transition"
+        >
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-6 h-6" />
+          התחבר עם Google כדי להתחיל
+        </button>
+      </main>
+    );
+  }
+
   return (
     <main className="p-8 max-w-4xl mx-auto font-sans text-gray-800">
+      {/* אזור פרופיל משתמש ויציאה */}
+      <div className="flex justify-end items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex items-center gap-3">
+          <img 
+            src={session.user.image} 
+            alt="Profile" 
+            className="w-10 h-10 rounded-full border-2 border-gray-100" 
+          />
+          <span className="text-sm font-semibold text-gray-700">
+            שלום, {session.user.name}
+          </span>
+        </div>
+        
+        <button 
+          onClick={() => signOut()} 
+          className="text-sm bg-red-50 text-red-600 px-5 py-2 rounded-lg font-semibold hover:bg-red-100 transition-colors border border-red-100"
+        >
+          יציאה
+        </button>
+      </div>
       <h1 className="text-3xl font-bold mb-8 text-black">מנוע חיפוש משרות + נטוורקינג</h1>
       
       <div className="bg-gray-100 p-6 rounded-lg mb-8 shadow-sm">
@@ -157,55 +177,12 @@ const handleFileUpload = (e) => {
             placeholder="לדוגמה: Full Stack / Embedded"
             value={jobTitle}
             onChange={(e) => setJobTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter")
+                  handleSearch();
+            }}
             className="border p-2 rounded w-full md:w-1/2 text-black bg-white"
           />
-        </div>
-
-        <div className="mb-6 flex flex-col md:flex-row gap-4 w-full md:w-1/2">
-          <div className="flex-1">
-            <label className="block text-sm font-semibold mb-2">רמת משרה</label>
-            <select 
-              value={experienceLevel} 
-              onChange={(e) => setExperienceLevel(e.target.value)}
-              className="border p-2 rounded w-full text-black bg-white"
-            >
-              <option value="">הכל</option>
-              <option value="Junior">Junior</option>
-              <option value="Mid">Mid-level</option>
-              <option value="Senior">Senior</option>
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm font-semibold mb-2">שנות ניסיון</label>
-            <select 
-              value={yearsOfExperience} 
-              onChange={(e) => setYearsOfExperience(e.target.value)}
-              className="border p-2 rounded w-full text-black bg-white"
-            >
-              <option value="">הכל</option>
-              <option value="0-1">0-1 שנים (ללא ניסיון)</option>
-              <option value="1-3">1-3 שנים</option>
-              <option value="3-5">3-5 שנים</option>
-              <option value="5+">5+ שנים</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-semibold mb-2">איפה לחפש?</label>
-          <div className="flex flex-wrap gap-4">
-            {Object.keys(platforms).map(platform => (
-              <label key={platform} className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={platforms[platform]}
-                  onChange={() => handlePlatformChange(platform)}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm font-medium">{platform.split('.')[0] || platform}</span>
-              </label>
-            ))}
-          </div>
         </div>
 
         <div className="mb-6">
