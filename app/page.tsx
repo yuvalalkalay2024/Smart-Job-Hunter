@@ -2,12 +2,27 @@
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { useSession, signIn, signOut } from "next-auth/react";
+import { JobFilters, CATEGORIES, emptySelection } from "./components/JobFilterSearch";
+
+// מצב של חיפוש אחד (שאילתה אחת): איזו אפשרות הפעילה אותו, איפה הוא עומד, והאם יש עוד
+// משרה אחת בטבלת התוצאות
+interface Job {
+  company: string;
+  title: string;
+  url: string;
+  searchLabels: string[]; // האפשרויות שסומנו והחזירו את המשרה הזו
+  hasConnection?: boolean;
+  connectionDetails: { firstName: string; lastName: string; connectionPosition: string };
+}
+
+type SearchState = { label: string | null; start: number; hasMore: boolean };
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [isMounted, setIsMounted] = useState(false);
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<Job[]>([]);
   const [jobTitle, setJobTitle] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState(emptySelection); // סינון לפי סוגי משרות
   
   const [connections, setConnections] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -62,61 +77,111 @@ const handleFileUpload = (e) => {
     }
   };
 
-// הוסף את המשתנים האלו מתחת ל-useState האחרים שלך:
-  const [startIndex, setStartIndex] = useState(0);
-  const [hasMore, setHasMore] = useState(false); // יודע אם להציג את כפתור "טען עוד"
+  // כל חיפוש (שאילתה אחת) זוכר לבד איפה הוא עומד, כדי ש"טען עוד" ימשיך מאותו מקום
+  const [searches, setSearches] = useState<Record<string, SearchState>>({});
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // פונקציה כללית לשליפת משרות
-  const fetchJobs = async (currentStart, isLoadMore = false) => {
-    
+  // יש עוד תוצאות אם לפחות אחד מהחיפושים עדיין לא הסתיים
+  const hasMore = Object.values(searches).some(s => s.hasMore);
+
+  // כל סוגי המשרות שסומנו בכל הקטגוריות
+  const selectedTypes = [...new Set(CATEGORIES.flatMap(category => selectedFilters[category.id]))];
+
+  // אפשר לחפש אם כתבת תפקיד או סימנת לפחות אפשרות אחת
+  const canSearch = selectedTypes.length > 0 || jobTitle.trim() !== '';
+
+  // כל אפשרות שסומנה היא חיפוש נפרד. אם הוקלד גם טקסט - הוא מצטרף לכל חיפוש.
+  const buildQueries = () => {
+    const text = jobTitle.trim();
+    if (selectedTypes.length === 0) return [{ query: text, label: null, start: 0 }];
+    return selectedTypes.map(type => ({
+      query: `${text} ${type}`.trim(),
+      label: type,
+      start: 0
+    }));
+  };
+
+  // שליפת משרות: חיפוש נפרד לכל אפשרות, כולם במקביל
+  const fetchJobs = async (isLoadMore = false) => {
+
     if (isLoadMore) setLoadingMore(true);
     else setLoading(true);
 
     try {
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobTitle: jobTitle,
-          start: currentStart // שליחת המיקום שממנו ממשיכים לחפש
+      // בחיפוש חדש - כל האפשרויות. ב"טען עוד" - רק חיפושים שיש להם עוד תוצאות
+      const targets = isLoadMore
+        ? Object.entries(searches)
+            .filter(([, s]) => s.hasMore)
+            .map(([query, s]) => ({ query, label: s.label, start: s.start + 20 }))
+        : buildQueries();
+
+      const responses = await Promise.all(
+        targets.map(async (target) => {
+          try {
+            const response = await fetch('/api/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jobTitle: target.query,
+                start: target.start, // המקום שממנו ממשיכים לחפש
+                connectionsData: connections
+              })
+            });
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error);
+            return { ...target, jobs: data.data as Job[], ok: true, error: undefined as Error | undefined };
+          } catch (error) {
+            // חיפוש אחד שנכשל לא מפיל את האחרים
+            console.error(`Search failed for "${target.query}":`, error);
+            return { ...target, jobs: [] as Job[], ok: false, error: error as Error };
+          }
         })
-      });
-      const data = await response.json();
-      
-      if (data.data.length > 0) {
-        if (isLoadMore) {
-          // חיבור התוצאות החדשות לתוצאות הקיימות
-          setResults(prev => [...prev, ...data.data]);
-        } else {
-          // חיפוש חדש - החלפת התוצאות
-          setResults(data.data);
-        }
-        setHasMore(true); // מניחים שיש עוד עמוד
-      } else {
-        // אם לא חזרו תוצאות, כנראה הגענו לסוף
-        if (!isLoadMore) setResults([]);
-        setHasMore(false); 
+      );
+
+      if (responses.every(r => !r.ok)) {
+        alert("החיפוש נכשל: " + (responses[0]?.error?.message || "שגיאה לא ידועה"));
       }
+
+      // איחוד התוצאות. אותה משרה יכולה להופיע בכמה חיפושים - מציגים אותה פעם אחת
+      // ורושמים לידה את כל האפשרויות שהחזירו אותה.
+      const merged = new Map<string, Job>(isLoadMore ? results.map(job => [job.url, job] as [string, Job]) : []);
+      for (const r of responses) {
+        for (const job of r.jobs) {
+          const existing = merged.get(job.url);
+          if (existing) {
+            if (r.label && !existing.searchLabels.includes(r.label)) {
+              merged.set(job.url, { ...existing, searchLabels: [...existing.searchLabels, r.label] });
+            }
+          } else {
+            merged.set(job.url, { ...job, searchLabels: r.label ? [r.label] : [] });
+          }
+        }
+      }
+      setResults([...merged.values()]);
+
+      // שומרים לכל חיפוש איפה הוא עומד. אם לא חזרו תוצאות - הגענו לסוף שלו.
+      const updates: Record<string, SearchState> = {};
+      for (const r of responses) {
+        updates[r.query] = { label: r.label, start: r.start, hasMore: r.ok && r.jobs.length > 0 };
+      }
+      setSearches(prev => (isLoadMore ? { ...prev, ...updates } : updates));
     } catch (error) {
       console.error('Search failed:', error);
     }
-    
+
     setLoading(false);
     setLoadingMore(false);
   };
 
   // כפתור חיפוש רגיל (מתחיל מאפס)
   const handleSearch = () => {
-    setStartIndex(0);
-    fetchJobs(0, false);
+    if (!canSearch) return;
+    fetchJobs(false);
   };
 
-  // כפתור טען עוד (מוסיף 20 לאינדקס הקיים)
+  // כפתור טען עוד (ממשיך בכל חיפוש מהמקום שבו הוא עצר)
   const handleLoadMore = () => {
-    const nextStart = startIndex + 20;
-    setStartIndex(nextStart);
-    fetchJobs(nextStart, true);
+    fetchJobs(true);
   };
 
   if (!isMounted) return null; 
@@ -185,6 +250,11 @@ const handleFileUpload = (e) => {
           />
         </div>
 
+        {/* סינון לפי סוגי משרות - מתחת לשורת החיפוש */}
+        <div className="mb-6">
+          <JobFilters selected={selectedFilters} onChange={setSelectedFilters} />
+        </div>
+
         <div className="mb-6">
           <label className="block text-sm font-semibold mb-2">הצלבת קשרים מלינקדאין (אופציונלי)</label>
           <input 
@@ -198,7 +268,7 @@ const handleFileUpload = (e) => {
 
         <button 
           onClick={handleSearch}
-          disabled={loading || jobTitle.trim() === ''}
+          disabled={loading || !canSearch}
           className="bg-blue-600 text-white px-8 py-3 rounded font-semibold disabled:opacity-50 hover:bg-blue-700 transition"
         >
           {loading ? 'מבצע סריקה...' : 'התחל חיפוש'}
@@ -210,6 +280,13 @@ const handleFileUpload = (e) => {
           <h2 className="text-xl font-bold mb-4 text-black">
             תוצאות חיפוש ({results.length} משרות)
           </h2>
+          {Object.values(searches).some(s => s.label) && (
+            <p className="text-sm text-gray-500 mb-4">
+              {Object.values(searches).map(s => s.label).filter((label): label is string => !!label).map(label =>
+                `${label}: ${results.filter(job => job.searchLabels?.includes(label)).length}`
+              ).join(" · ")}
+            </p>
+          )}
           <div className="overflow-x-auto">
             <table className="min-w-full text-right border-collapse">
               <thead>
@@ -224,7 +301,18 @@ const handleFileUpload = (e) => {
                 {results.map((job, index) => (
                   <tr key={index} className="border-b border-gray-100 hover:bg-blue-50">
                     <td className="p-3 font-bold text-gray-800">{job.company}</td>
-                    <td className="p-3 text-gray-700">{job.title}</td>
+                    <td className="p-3 text-gray-700">
+                      {job.title}
+                      {job.searchLabels && job.searchLabels.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {job.searchLabels.map(label => (
+                            <span key={label} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-3">
                       {job.hasConnection ? (
                         <div className="flex flex-col items-start">
