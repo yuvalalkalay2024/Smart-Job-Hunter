@@ -14,9 +14,54 @@ function extractCompanyName(url) {
   return "Unknown";
 }
 
-// ... (השאר את הפונקציה extractCompanyName כפי שהיא)
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 200;
+const jobsCache = [];
+
+function makeCacheKey(jobTitle, start) {
+  const normalized = String(jobTitle ?? "").toLowerCase().trim().replace(/\s+/g, " ");
+  return `${normalized}:${start}`;
+}
+
+function getCachedJobs(key) {
+  const now = Date.now();
+  const index = jobsCache.findIndex((entry) => entry.key === key);
+  if (index === -1) return null;
+  if (jobsCache[index].expiresAt <= now) {
+    jobsCache.splice(index, 1);
+    return null;
+  }
+  return jobsCache[index].jobs;
+}
+
+function setCachedJobs(key, jobs) {
+  const now = Date.now();
+  for (let i = jobsCache.length - 1; i >= 0; i--) {
+    if (jobsCache[i].expiresAt <= now) jobsCache.splice(i, 1);
+  }
+
+  const entry = { key, jobs, expiresAt: now + CACHE_TTL_MS };
+  const existing = jobsCache.findIndex((item) => item.key === key);
+  if (existing === -1) jobsCache.push(entry);
+  else jobsCache[existing] = entry;
+
+  while (jobsCache.length > CACHE_MAX_ENTRIES) {
+    let oldest = 0;
+    for (let i = 1; i < jobsCache.length; i++) {
+      if (jobsCache[i].expiresAt < jobsCache[oldest].expiresAt) oldest = i;
+    }
+    jobsCache.splice(oldest, 1);
+  }
+}
 
 async function fetchJobsFromGoogle(jobTitle, start = 0) {
+  const cacheKey = makeCacheKey(jobTitle, start);
+  const cached = getCachedJobs(cacheKey);
+  if (cached) {
+    console.log(`Cache hit for comeet with start=${start}:`, jobTitle);
+    return cached.map((job) => ({ ...job }));
+  }
+
   const apiKey = process.env.SERPAPI_KEY; 
   
   let query = [`site:www.comeet.com/jobs junior ${jobTitle} Israel`];
@@ -31,14 +76,18 @@ async function fetchJobsFromGoogle(jobTitle, start = 0) {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (data.organic_results && data.organic_results.length > 0) {
-      return data.organic_results.map(result => ({
-        title: result.title.replace(/\s*[-–|]?\s*Comeet\s*/gi, ' ').trim(),
-        url: result.link
-      }));
-    } else {
+    if (!response.ok || data.error) {
+      console.error("Error fetching from SerpApi:", data.error || response.status);
       return [];
     }
+
+    const jobs = (data.organic_results || []).map(result => ({
+      title: result.title.replace(/\s*[-–|]?\s*Comeet\s*/gi, ' ').trim(),
+      url: result.link
+    }));
+
+    setCachedJobs(cacheKey, jobs);
+    return jobs;
   } catch (error) {
     console.error("Error fetching from SerpApi:", error);
     return [];

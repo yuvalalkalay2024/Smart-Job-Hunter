@@ -187,22 +187,30 @@ const handleFileUpload = (e) => {
   if (!isMounted) return null; 
 
   if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center text-xl">טוען...</div>;
+    return (
+      <main className="flex flex-1 items-center justify-center text-xl" role="status" aria-live="polite">
+        טוען...
+      </main>
+    );
   }
 
   if (!session) {
     return (
-      <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <h1 className="text-5xl font-bold text-gray-900 mb-6 text-center">Smart Job Hunter 🚀</h1>
+      <main className="flex flex-1 flex-col items-center justify-center bg-gray-50 p-4">
+        <h1 className="mb-6 w-full text-center text-5xl font-bold">
+          <span className="text-orange-500">Mitzi</span>{" "}
+          <span className="text-blue-500">Jobs</span>
+        </h1>
         <p className="text-xl text-gray-600 mb-10 text-center max-w-2xl">
           מנוע חיפוש המשרות החכם שלך. מוצא משרות מתחת לרדאר בחברות ישראליות, 
           ומצליב אותן אוטומטית עם רשת הלינקדאין שלך כדי למצוא ממליצים.
         </p>
         <button 
+          type="button"
           onClick={() => signIn('google')} 
-          className="bg-white border border-gray-300 text-gray-700 px-8 py-4 rounded-xl shadow-md hover:bg-gray-50 flex items-center gap-4 text-lg font-semibold transition"
+          className="bg-white border border-gray-300 text-gray-700 px-8 py-4 rounded-xl shadow-md hover:bg-gray-50 flex items-center gap-4 text-lg font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-6 h-6" />
+          <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="לוגו Google" className="w-6 h-6" />
           התחבר עם Google כדי להתחיל
         </button>
       </main>
@@ -210,13 +218,12 @@ const handleFileUpload = (e) => {
   }
 
   return (
-    <main className="p-8 max-w-4xl mx-auto font-sans text-gray-800">
-      {/* אזור פרופיל משתמש ויציאה */}
-      <div className="flex justify-end items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+    <main className="mx-auto w-full max-w-4xl flex-1 p-8 font-sans text-gray-800">
+      <header className="flex justify-end items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3">
           <img 
             src={session.user.image} 
-            alt="Profile" 
+            alt={session.user?.name ? `תמונת הפרופיל של ${session.user.name}` : "תמונת פרופיל"}
             className="w-10 h-10 rounded-full border-2 border-gray-100" 
           />
           <span className="text-sm font-semibold text-gray-700">
@@ -225,28 +232,34 @@ const handleFileUpload = (e) => {
         </div>
         
         <button 
+          type="button"
           onClick={() => signOut()} 
-          className="text-sm bg-red-50 text-red-600 px-5 py-2 rounded-lg font-semibold hover:bg-red-100 transition-colors border border-red-100"
+          className="text-sm bg-red-50 text-red-600 px-5 py-2 rounded-lg font-semibold hover:bg-red-100 transition-colors border border-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
         >
           יציאה
         </button>
-      </div>
-      <h1 className="text-3xl font-bold mb-8 text-black">מנוע חיפוש משרות + נטוורקינג</h1>
+      </header>
+      <h1 className="my-4 w-full text-center text-3xl font-bold">
+        <span className="text-orange-500">Mitzi</span>{" "}
+        <span className="text-blue-500">Jobs</span>
+      </h1>
       
-      <div className="bg-gray-100 p-6 rounded-lg mb-8 shadow-sm">
-        
+      <section aria-label="חיפוש משרות" className="bg-gray-100 p-6 rounded-lg mb-8 shadow-sm">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSearch();
+          }}
+        >
         <div className="mb-6">
-          <label className="block text-sm font-semibold mb-2">איזה תפקיד אתה מחפש?</label>
+          <label htmlFor="job-title" className="block text-sm font-semibold mb-2">איזה תפקיד אתה מחפש?</label>
           <input 
+            id="job-title"
             type="text" 
             placeholder="לדוגמה: Full Stack / Embedded"
             value={jobTitle}
             onChange={(e) => setJobTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter")
-                  handleSearch();
-            }}
-            className="border p-2 rounded w-full md:w-1/2 text-black bg-white"
+            className="border p-2 rounded w-full md:w-1/2 text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
@@ -256,27 +269,29 @@ const handleFileUpload = (e) => {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-semibold mb-2">הצלבת קשרים מלינקדאין (אופציונלי)</label>
+          <label htmlFor="connections-file" className="block text-sm font-semibold mb-2">הצלבת קשרים מלינקדאין (אופציונלי)</label>
           <input 
+            id="connections-file"
             type="file" 
             accept=".csv"
             onChange={handleFileUpload}
-            className="text-sm"
+            className="text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {connections && <span className="text-green-600 text-sm ml-2 font-semibold">נטען בהצלחה!</span>}
         </div>
 
         <button 
-          onClick={handleSearch}
+          type="submit"
           disabled={loading || !canSearch}
-          className="bg-blue-600 text-white px-8 py-3 rounded font-semibold disabled:opacity-50 hover:bg-blue-700 transition"
+          className="bg-blue-600 text-white px-8 py-3 rounded font-semibold disabled:opacity-50 hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2"
         >
           {loading ? 'מבצע סריקה...' : 'התחל חיפוש'}
         </button>
-      </div>
+        </form>
+      </section>
 
       {results && results.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mt-8">
+        <section aria-label="תוצאות חיפוש" className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mt-8">
           <h2 className="text-xl font-bold mb-4 text-black">
             תוצאות חיפוש ({results.length} משרות)
           </h2>
@@ -291,10 +306,10 @@ const handleFileUpload = (e) => {
             <table className="min-w-full text-right border-collapse">
               <thead>
                 <tr className="bg-gray-100 border-b border-gray-200">
-                  <th className="p-3 font-semibold text-gray-700">שם החברה</th>
-                  <th className="p-3 font-semibold text-gray-700">תפקיד</th>
-                  <th className="p-3 font-semibold text-gray-700">קשר (Referral)</th>
-                  <th className="p-3 font-semibold text-gray-700">קישור</th>
+                  <th scope="col" className="p-3 font-semibold text-gray-700">שם החברה</th>
+                  <th scope="col" className="p-3 font-semibold text-gray-700">תפקיד</th>
+                  <th scope="col" className="p-3 font-semibold text-gray-700">קשר (Referral)</th>
+                  <th scope="col" className="p-3 font-semibold text-gray-700">קישור</th>
                 </tr>
               </thead>
               <tbody>
@@ -331,7 +346,13 @@ const handleFileUpload = (e) => {
                       )}
                     </td>
                     <td className="p-3">
-                      <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm font-semibold">
+                      <a
+                        href={job.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`צפה במשרה ${job.title} בחברת ${job.company}, נפתח בחלון חדש`}
+                        className="text-blue-600 hover:underline text-sm font-semibold rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
                         צפה במשרה
                       </a>
                     </td>
@@ -342,16 +363,17 @@ const handleFileUpload = (e) => {
       {hasMore && (
         <div className="mt-6 flex justify-center">
               <button 
+                type="button"
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-semibold disabled:opacity-50 hover:bg-gray-300 transition"
+                className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-semibold disabled:opacity-50 hover:bg-gray-300 transition focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-offset-2"
               >
                 {loadingMore ? 'טוען משרות נוספות...' : 'טען משרות נוספות'}
               </button>
             </div>
       )}
           </div>
-        </div>
+        </section>
       )}
     </main>
   );

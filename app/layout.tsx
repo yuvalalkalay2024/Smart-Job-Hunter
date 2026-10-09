@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Providers } from './Providers'; // הוסף את השורה הזו למעלה
+import { Providers } from './Providers';
+import { Footer } from "./components/Footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,7 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <Providers>
-          {children}
+          <div className="flex min-h-screen flex-1 flex-col">
+            {children}
+            <Footer />
+          </div>
         </Providers>
       </body>
     </html>

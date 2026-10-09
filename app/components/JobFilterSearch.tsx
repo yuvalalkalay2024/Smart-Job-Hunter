@@ -191,7 +191,7 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
   const clearAll = () => onChange(emptySelection());
 
   return (
-    <div dir="rtl">
+    <section dir="rtl" aria-label="סינון לפי סוג משרה">
       <div className="flex flex-row flex-wrap items-start gap-3">
         {CATEGORIES.map((category) => {
           const isOpen = open[category.id];
@@ -205,7 +205,7 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
                 onClick={() => toggleOpen(category.id)}
                 aria-expanded={isOpen}
                 aria-controls={panelId}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg border px-4 py-3 text-start font-semibold transition ${
+                className={`flex w-full items-center justify-between gap-2 rounded-lg border px-4 py-3 text-start font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   chosen.length > 0
                     ? "border-blue-500 bg-blue-50 text-blue-800"
                     : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50"
@@ -251,9 +251,9 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
                               type="checkbox"
                               checked={checked}
                               onChange={() => toggleOption(category.id, option)}
-                              className="peer sr-only"
+                              className="peer sr-only focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            <span className="inline-block rounded-full border border-gray-300 bg-gray-50 px-3 py-1 text-sm text-gray-700 transition select-none hover:bg-gray-100 peer-checked:border-blue-600 peer-checked:bg-blue-600 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400">
+                            <span className="inline-block rounded-full border border-gray-300 bg-gray-50 px-3 py-1 text-sm text-gray-700 transition select-none hover:bg-gray-100 peer-checked:border-blue-600 peer-checked:bg-blue-600 peer-checked:text-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500">
                               {option}
                             </span>
                           </label>
@@ -263,7 +263,7 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
                               onClick={() => removeCustomOption(category.id, option)}
                               aria-label={`הסר את ${option}`}
                               title="הסר אפשרות"
-                              className="text-gray-400 hover:text-red-600"
+                              className="rounded text-gray-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
                             >
                               ×
                             </button>
@@ -290,13 +290,13 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
                       }}
                       placeholder="הוסף אפשרות..."
                       aria-label={`הוסף אפשרות חדשה ל${category.title}`}
-                      className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-black outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
                       type="button"
                       onClick={() => addCustomOption(category.id)}
                       disabled={drafts[category.id].trim() === ""}
-                      className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       הוסף
                     </button>
@@ -308,7 +308,7 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
                       type="button"
                       onClick={() => clearCategory(category.id)}
                       disabled={chosen.length === 0}
-                      className="text-sm font-medium text-red-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
+                      className="rounded text-sm font-medium text-red-600 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
                     >
                       נקה
                     </button>
@@ -324,7 +324,7 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
           type="button"
           onClick={clearAll}
           disabled={selectedTypes.length === 0}
-          className="shrink-0 self-start rounded-lg border border-red-200 bg-red-50 px-4 py-3 font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 self-start rounded-lg border border-red-200 bg-red-50 px-4 py-3 font-semibold text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           נקה את כל הסינונים
         </button>
@@ -340,8 +340,9 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
                 key={`${category.id}-${type}`}
                 type="button"
                 onClick={() => toggleOption(category.id, type)}
+                aria-label={`הסר את ${type} מהסינון`}
                 title="הסר מהסינון"
-                className="rounded-full bg-blue-100 px-3 py-1 text-blue-800 hover:bg-blue-200"
+                className="rounded-full bg-blue-100 px-3 py-1 text-blue-800 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {type} ×
               </button>
@@ -351,7 +352,7 @@ export function JobFilters({ selected, onChange }: JobFiltersProps) {
       )}
 
 
-    </div>
+    </section>
   );
 }
 
@@ -457,12 +458,13 @@ export default function JobFilterSearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="חיפוש משרה או חברה..."
-          className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 text-black outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          aria-label="חיפוש משרה או חברה"
+          className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           type="submit"
           disabled={!canSearch || loading}
-          className="shrink-0 rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "מחפש..." : "חיפוש"}
         </button>
@@ -474,7 +476,7 @@ export default function JobFilterSearch() {
       </div>
 
       {/* Results */}
-      <div className="mt-6" aria-live="polite">
+      <section className="mt-6" aria-live="polite" aria-label="תוצאות החיפוש">
         {loading && <p className="text-gray-500">מריץ חיפושים במקביל...</p>}
 
         {!loading && results !== null && (
@@ -519,7 +521,7 @@ export default function JobFilterSearch() {
             )}
           </div>
         )}
-      </div>
+      </section>
     </section>
   );
 }
