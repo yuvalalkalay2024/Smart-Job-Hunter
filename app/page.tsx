@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from 'react';
+import type { ChangeEvent } from 'react';
 import Papa from 'papaparse';
+import type { ParseResult } from 'papaparse';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { JobFilters, CATEGORIES, emptySelection } from "./components/JobFilterSearch";
 
@@ -17,6 +19,13 @@ interface Job {
 
 type SearchState = { label: string | null; start: number; hasMore: boolean };
 
+type ConnectionRow = {
+  "First Name"?: string;
+  "Last Name"?: string;
+  Position?: string;
+  Company?: string;
+};
+
 export default function Home() {
   const { data: session, status } = useSession();
   const [isMounted, setIsMounted] = useState(false);
@@ -24,44 +33,45 @@ export default function Home() {
   const [jobTitle, setJobTitle] = useState('');
   const [selectedFilters, setSelectedFilters] = useState(emptySelection); // סינון לפי סוגי משרות
   
-  const [connections, setConnections] = useState(null);
+  const [connections, setConnections] = useState<ConnectionRow[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       
-      reader.onload = (event) => {
-        const csvText = event.target.result;
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        const csvText = event.target?.result;
+        if (typeof csvText !== "string") return;
         // פיצול הקובץ לשורות
         const lines = csvText.split('\n');
         
         // חיפוש השורה שבה מתחילות הכותרות האמיתיות של לינקדאין
-        const headerIndex = lines.findIndex(line => line.startsWith('First Name'));
+        const headerIndex = lines.findIndex((line: string) => line.startsWith('First Name'));
         
         if (headerIndex !== -1) {
           // חיתוך הקובץ כך שיתחיל מהכותרות ויתעלם משורות ההערה
           const cleanCsvText = lines.slice(headerIndex).join('\n');
           
-          Papa.parse(cleanCsvText, {
+          Papa.parse<ConnectionRow>(cleanCsvText, {
             header: true,
             skipEmptyLines: true, // מדלג על שורות ריקות
-            complete: (results) => {
+            complete: (results: ParseResult<ConnectionRow>) => {
               setConnections(results.data);
               console.log("✅ CSV Loaded successfully! Total rows:", results.data.length);
               
               // הוספנו פילטר שבודק אם אברא קיימת בזיכרון של הדפדפן
-              const abraTest = results.data.filter(row => 
+              const abraTest = results.data.filter((row: ConnectionRow) => 
                 row['Company'] && row['Company'].toLowerCase().includes('abra')
               );
               console.log("🔍 Frontend CSV test for 'abra':", abraTest);
             },
-            error: (error) => {
+            error: (error: Error) => {
               console.error("Error parsing CSV:", error);
             }
           });
@@ -222,12 +232,12 @@ const handleFileUpload = (e) => {
       <header className="flex justify-end items-center gap-4 mb-8 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3">
           <img 
-            src={session.user.image} 
-            alt={session.user?.name ? `תמונת הפרופיל של ${session.user.name}` : "תמונת פרופיל"}
+            src={session?.user?.image ?? undefined}
+            alt={session?.user?.name ? `תמונת הפרופיל של ${session?.user?.name ?? ""}` : "תמונת פרופיל"}
             className="w-10 h-10 rounded-full border-2 border-gray-100" 
           />
           <span className="text-sm font-semibold text-gray-700">
-            שלום, {session.user.name}
+            שלום, {session?.user?.name ?? ""}
           </span>
         </div>
         
